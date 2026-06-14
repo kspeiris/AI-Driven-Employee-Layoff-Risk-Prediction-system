@@ -43,7 +43,7 @@ def get_local_predictor():
 
 
 def predict_record(features):
-    """Use the Flask API when reachable, otherwise run local model inference."""
+    """Use the Flask API when reachable, otherwise run local saved ML/DL model inference."""
     try:
         response = requests.post(f"{API_URL}/predict", json=features, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
@@ -59,7 +59,7 @@ def predict_record(features):
 
 
 def predict_batch_records(records):
-    """Use the batch API when reachable, otherwise run local model inference."""
+    """Use the batch API when reachable, otherwise run local saved ML/DL model inference."""
     try:
         response = requests.post(
             f"{API_URL}/predict/batch",
@@ -88,7 +88,7 @@ st.markdown("### Predict employee layoff risk using AI models")
 model_choice = st.selectbox(
     "Prediction Model",
     ["Machine Learning - CatBoost", "Deep Learning - ANN", "Deep Learning - DNN"],
-    help="Predictions use saved model files, not rule-based scoring."
+    help="Predictions use saved ML/DL model artifacts only."
 )
 model_type = {
     "Machine Learning - CatBoost": "ml",
@@ -204,10 +204,7 @@ if mode == "Single Prediction":
             result, source = predict_record(features)
             if result.get('success'):
                 if source == 'local':
-                    st.warning("Backend API unavailable; using local model inference.")
-
-                st.success("Prediction complete!")
-                
+                        st.warning("Backend API unavailable; using local saved ML/DL model inference.")
                 col1, col2, col3 = st.columns(3)
                 
                 risk_color = {
