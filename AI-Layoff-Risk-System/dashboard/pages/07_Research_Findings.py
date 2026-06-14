@@ -186,4 +186,4 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("*Report generated from analysis of 20,000 employee records across 8 industries*")
+st.markdown("*Report based on analysis of 20,000 employee records across 8 industries*")
