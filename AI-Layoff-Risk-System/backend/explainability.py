@@ -21,6 +21,8 @@ class ModelExplainer:
         # Try to load model
         try:
             self.model = joblib.load(CATBOOST_MODEL_PATH)
+            if hasattr(self.model, "n_jobs"):
+                self.model.n_jobs = 1
             self.scaler = joblib.load(SCALER_PATH)
             self.shap_explainer = shap.TreeExplainer(self.model)
         except FileNotFoundError:
@@ -42,12 +44,12 @@ class ModelExplainer:
         if self.model is None:
             return []
         
-        features_array = np.array(features).reshape(1, -1)
-        shap_values = self.shap_explainer.shap_values(features_array)
+        features_frame = pd.DataFrame([features], columns=self.feature_names)
+        shap_values = self.shap_explainer.shap_values(features_frame)
         
         # For multiclass, take the predicted class
         if isinstance(shap_values, list):
-            prediction = self.model.predict(features_array)[0]
+            prediction = self.model.predict(features_frame)[0]
             shap_values = shap_values[prediction][0]
         else:
             shap_values = shap_values[0]

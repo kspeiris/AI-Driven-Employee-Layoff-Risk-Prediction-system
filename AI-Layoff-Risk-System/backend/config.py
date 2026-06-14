@@ -17,8 +17,14 @@ DATABASE_PATH = BASE_DIR / "ai_layoff.db"
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 # Model files
-CATBOOST_MODEL_PATH = MODELS_DIR / "catboost_model.pkl"
+ML_MODEL_PATH = MODELS_DIR / "ml_model.pkl"
+LEGACY_ML_MODEL_PATH = MODELS_DIR / "catboost_model.pkl"
+ANN_MODEL_PATH = MODELS_DIR / "ann_layoff_model.keras"
+DNN_MODEL_PATH = MODELS_DIR / "dnn_layoff_model.keras"
 SCALER_PATH = MODELS_DIR / "scaler.pkl"
+
+# Backward-compatible alias used by explainability code.
+CATBOOST_MODEL_PATH = ML_MODEL_PATH
 
 # API settings
 API_HOST = "0.0.0.0"
