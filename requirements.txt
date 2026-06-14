@@ -1,0 +1,2 @@
+# Streamlit Cloud reads dependencies from the repository root.
+-r AI-Layoff-Risk-System/requirements.txt
