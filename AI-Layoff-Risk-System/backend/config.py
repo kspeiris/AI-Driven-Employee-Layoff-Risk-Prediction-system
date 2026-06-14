@@ -51,7 +51,7 @@ FEATURE_COLUMNS = [
 
 # Categorical feature mappings for API
 INDUSTRY_LIST = [
-    'Finance', 'Healthcare', 'IT', 'Logistics', 'Manufacturing', 'Retail', 'Telecom', 'Education'
+    'Finance', 'Healthcare', 'IT', 'Logistics', 'Manufacturing', 'Retail', 'Telecom'
 ]
 
 JOB_ROLE_LIST = [
