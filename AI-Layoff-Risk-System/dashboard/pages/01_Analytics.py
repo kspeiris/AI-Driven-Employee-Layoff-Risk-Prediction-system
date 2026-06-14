@@ -95,7 +95,8 @@ with tab2:
 with tab3:
     st.subheader("Feature Correlation with Layoff Risk")
     
-    correlations = df.corr()['Layoff_Risk'].drop('Layoff_Risk').sort_values(ascending=False)
+    numeric_df = df.select_dtypes(include='number')
+    correlations = numeric_df.corr()['Layoff_Risk'].drop('Layoff_Risk').sort_values(ascending=False)
     
     # Create color mapping
     colors = ['#dc3545' if x > 0 else '#28a745' for x in correlations.values[:20]]

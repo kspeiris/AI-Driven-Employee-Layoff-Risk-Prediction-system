@@ -11,6 +11,12 @@ DATA_PATH = Path(__file__).parent.parent.parent / "data" / "processed_layoff_dat
 df = pd.read_csv(DATA_PATH)
 
 
+def risk_correlations():
+    """Calculate correlations using only numeric columns."""
+    numeric_df = df.select_dtypes(include='number')
+    return numeric_df.corr()['Layoff_Risk'].drop('Layoff_Risk').sort_values(ascending=False)
+
+
 @analytics_bp.route('/analytics/summary', methods=['GET'])
 def get_summary():
     """Get dataset summary statistics."""
@@ -34,7 +40,7 @@ def get_summary():
     top_risk_industries = dict(sorted(industry_risk.items(), key=lambda x: x[1], reverse=True)[:5])
     
     # Correlation with target
-    correlations = df.corr()['Layoff_Risk'].drop('Layoff_Risk').sort_values(ascending=False)
+    correlations = risk_correlations()
     top_correlations = correlations.head(10).to_dict()
     
     return jsonify({
@@ -140,7 +146,7 @@ def get_job_analysis(job_role):
 def get_correlations():
     """Get feature correlations with layoff risk."""
     
-    correlations = df.corr()['Layoff_Risk'].drop('Layoff_Risk').sort_values(ascending=False)
+    correlations = risk_correlations()
     
     return jsonify({
         'correlations': {k: round(v, 3) for k, v in correlations.head(20).items()}

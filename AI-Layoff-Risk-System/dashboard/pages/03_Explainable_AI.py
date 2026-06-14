@@ -7,6 +7,7 @@ import requests
 import plotly.express as px
 import plotly.graph_objects as go
 import sys
+import os
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -19,7 +20,8 @@ st.set_page_config(
 )
 
 df = load_data()
-API_URL = "http://localhost:5000"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
+REQUEST_TIMEOUT = 30
 
 st.title("🔍 Explainable AI Center")
 st.markdown("### Understand why employees are at risk using SHAP and LIME")
@@ -77,7 +79,7 @@ if selected_idx:
     
     with st.spinner("Computing SHAP values..."):
         try:
-            response = requests.post(f"{API_URL}/explain/shap", json=features)
+            response = requests.post(f"{API_URL}/explain/shap", json=features, timeout=REQUEST_TIMEOUT)
             shap_result = response.json()
             
             if shap_result['success']:
@@ -127,7 +129,7 @@ if selected_idx:
     if st.button("Generate LIME Explanation", type="secondary"):
         with st.spinner("Computing LIME explanation..."):
             try:
-                response = requests.post(f"{API_URL}/explain/lime", json=features)
+                response = requests.post(f"{API_URL}/explain/lime", json=features, timeout=REQUEST_TIMEOUT)
                 lime_result = response.json()
                 
                 if lime_result['success'] and lime_result['explanation']:
@@ -169,7 +171,8 @@ if st.button("Generate Global Feature Importance"):
             
             response = requests.post(
                 f"{API_URL}/explain/shap/summary",
-                json={'sample_data': sample_features}
+                json={'sample_data': sample_features},
+                timeout=REQUEST_TIMEOUT
             )
             
             if response.status_code == 200:
