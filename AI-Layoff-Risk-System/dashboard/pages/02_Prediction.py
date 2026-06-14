@@ -10,7 +10,12 @@ import sys
 import os
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DASHBOARD_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = PROJECT_ROOT / "backend"
+
+sys.path.append(str(DASHBOARD_DIR))
+sys.path.append(str(BACKEND_DIR))
 from utils.data_loader import load_data, get_feature_ranges, get_categorical_options
 
 st.set_page_config(
@@ -27,6 +32,55 @@ cat_options = get_categorical_options(df)
 # API endpoint
 API_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
 REQUEST_TIMEOUT = 15
+
+
+@st.cache_resource
+def get_local_predictor():
+    """Load backend prediction logic for deployments without a Flask process."""
+    from routes.predict import run_model_prediction
+
+    return run_model_prediction
+
+
+def predict_record(features):
+    """Use the Flask API when reachable, otherwise run local model inference."""
+    try:
+        response = requests.post(f"{API_URL}/predict", json=features, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        return response.json(), "api"
+    except requests.exceptions.RequestException:
+        predictor = get_local_predictor()
+        result = predictor(features)
+        return {
+            'success': True,
+            **result,
+            'prediction_id': None
+        }, "local"
+
+
+def predict_batch_records(records):
+    """Use the batch API when reachable, otherwise run local model inference."""
+    try:
+        response = requests.post(
+            f"{API_URL}/predict/batch",
+            json={'records': records},
+            timeout=REQUEST_TIMEOUT
+        )
+        response.raise_for_status()
+        return response.json(), "api"
+    except requests.exceptions.RequestException:
+        predictor = get_local_predictor()
+        predictions = []
+        for record in records:
+            predictions.append({
+                **predictor(record),
+                'prediction_id': None
+            })
+        return {
+            'success': True,
+            'count': len(predictions),
+            'predictions': predictions
+        }, "local"
 
 st.title("🎯 Layoff Risk Prediction Center")
 st.markdown("### Predict employee layoff risk using AI models")
