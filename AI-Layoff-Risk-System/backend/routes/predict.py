@@ -44,7 +44,7 @@ def _selected_model(model_type):
         return ann_model, "ANN"
     if normalized == "dnn":
         return dnn_model, "DNN"
-    return ml_model, "Random Forest"
+    return ml_model, "CatBoost"
 
 
 def _encoded_value(data, column, raw_value=None, prefix=None):
@@ -139,7 +139,7 @@ def run_model_prediction(data):
         probabilities = selected_model.predict(features_scaled, verbose=0)[0]
         prediction = int(np.argmax(probabilities))
     else:
-        prediction = int(selected_model.predict(feature_frame)[0])
+        prediction = int(np.asarray(selected_model.predict(feature_frame)).reshape(-1)[0])
         probabilities = selected_model.predict_proba(feature_frame)[0]
 
     confidence = float(np.max(probabilities))

@@ -73,7 +73,8 @@ st.header("📊 Statistical Analysis")
 # Correlation chart
 st.subheader("Feature Correlations with Layoff Risk")
 
-correlations = df.corr()['Layoff_Risk'].drop('Layoff_Risk').sort_values(ascending=False).head(15)
+numeric_df = df.select_dtypes(include='number')
+correlations = numeric_df.corr()['Layoff_Risk'].drop('Layoff_Risk').sort_values(ascending=False).head(15)
 
 fig = px.bar(
     x=correlations.values,
@@ -185,4 +186,4 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("*Report generated from analysis of 20,000 employee records across 8 industries*")
+st.markdown("*Report based on analysis of 20,000 employee records across 8 industries*")

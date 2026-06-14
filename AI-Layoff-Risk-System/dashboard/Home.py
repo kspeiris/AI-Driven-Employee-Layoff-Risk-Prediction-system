@@ -45,7 +45,7 @@ with st.sidebar:
     """)
     st.markdown("---")
     st.markdown("**Version:** 2.0.0")
-    st.markdown("**Deployed Models:** Random Forest, ANN, DNN")
+    st.markdown("**Deployed Models:** CatBoost, ANN, DNN")
 
 # Main content
 st.title("🤖 AI Workforce Intelligence Platform")
@@ -187,7 +187,7 @@ with right_col2:
     
     <div class="success-box">
         <strong>✅ Model Performance</strong><br>
-        Predictions are generated from saved ML/DL model files, not rule-based scoring.
+        CatBoost is deployed as the primary high-accuracy ML model; ANN and DNN are also available.
     </div>
     """, unsafe_allow_html=True)
 
@@ -197,6 +197,6 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #6c757d; padding: 2rem;">
     <hr>
-    <p>© 2024 AI Workforce Intelligence Platform | Powered by ML/DL models &amp; SHAP</p>
+    <p>© 2024 AI Workforce Intelligence Platform | Powered by CatBoost, DL models &amp; SHAP</p>
 </div>
 """, unsafe_allow_html=True)

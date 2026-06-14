@@ -29,7 +29,8 @@ CATBOOST_MODEL_PATH = ML_MODEL_PATH
 # API settings
 API_HOST = "0.0.0.0"
 API_PORT = 5000
-API_DEBUG = True
+ENVIRONMENT = os.getenv("FLASK_ENV", "development").lower()
+API_DEBUG = ENVIRONMENT != "production"
 
 # Feature columns (must match training)
 FEATURE_COLUMNS = [
