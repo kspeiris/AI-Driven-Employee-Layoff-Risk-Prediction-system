@@ -201,73 +201,68 @@ if mode == "Single Prediction":
     
     if st.button("🚀 Predict Risk", type="primary", use_container_width=True):
         with st.spinner("Analyzing employee data..."):
-            try:
-                response = requests.post(f"{API_URL}/predict", json=features, timeout=REQUEST_TIMEOUT)
-                result = response.json()
+            result, source = predict_record(features)
+            if result.get('success'):
+                if source == 'local':
+                    st.warning("Backend API unavailable; using local model inference.")
+
+                st.success("Prediction complete!")
                 
-                if result['success']:
-                    st.success("Prediction complete!")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    risk_color = {
-                        'High': '🔴',
-                        'Medium': '🟡',
-                        'Low': '🟢'
+                col1, col2, col3 = st.columns(3)
+                
+                risk_color = {
+                    'High': '🔴',
+                    'Medium': '🟡',
+                    'Low': '🟢'
+                }
+                
+                with col1:
+                    st.metric("Predicted Risk", f"{risk_color[result['risk_level']]} {result['risk_level']}")
+                
+                with col2:
+                    st.metric("Confidence", f"{result['confidence']*100:.1f}%")
+                
+                with col3:
+                    st.metric("Model", result.get('model_name', model_choice))
+                
+                # Gauge chart
+                import plotly.graph_objects as go
+                
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=result['confidence'] * 100,
+                    title={"text": "Confidence Score"},
+                    gauge={
+                        'axis': {'range': [0, 100]},
+                        'bar': {'color': "#1f3a93"},
+                        'steps': [
+                            {'range': [0, 50], 'color': "#ff9999"},
+                            {'range': [50, 80], 'color': "#ffeb99"},
+                            {'range': [80, 100], 'color': "#99ff99"}
+                        ]
                     }
-                    
-                    with col1:
-                        st.metric("Predicted Risk", f"{risk_color[result['risk_level']]} {result['risk_level']}")
-                    
-                    with col2:
-                        st.metric("Confidence", f"{result['confidence']*100:.1f}%")
-                    
-                    with col3:
-                        st.metric("Model", result.get('model_name', model_choice))
-                    
-                    # Gauge chart
-                    import plotly.graph_objects as go
-                    
-                    fig = go.Figure(go.Indicator(
-                        mode="gauge+number",
-                        value=result['confidence'] * 100,
-                        title={"text": "Confidence Score"},
-                        gauge={
-                            'axis': {'range': [0, 100]},
-                            'bar': {'color': "#1f3a93"},
-                            'steps': [
-                                {'range': [0, 50], 'color': "#ff9999"},
-                                {'range': [50, 80], 'color': "#ffeb99"},
-                                {'range': [80, 100], 'color': "#99ff99"}
-                            ]
-                        }
-                    ))
-                    fig.update_layout(height=300)
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Probability breakdown
-                    st.subheader("📊 Probability Distribution")
-                    prob_df = pd.DataFrame({
-                        'Risk Level': ['Low', 'Medium', 'High'],
-                        'Probability': [result['probabilities']['Low'], 
-                                      result['probabilities']['Medium'], 
-                                      result['probabilities']['High']]
-                    })
-                    
-                    fig = px.bar(
-                        prob_df, x='Risk Level', y='Probability',
-                        color='Risk Level',
-                        color_discrete_map={'Low': '#28a745', 'Medium': '#ffc107', 'High': '#dc3545'},
-                        title="Prediction Probabilities"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                else:
-                    st.error(f"Error: {result.get('error', 'Unknown error')}")
-            
-            except Exception as e:
-                st.error(f"Failed to connect to API: {str(e)}")
-                st.info("Make sure the backend server is running: python backend/app.py")
+                ))
+                fig.update_layout(height=300)
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Probability breakdown
+                st.subheader("📊 Probability Distribution")
+                prob_df = pd.DataFrame({
+                    'Risk Level': ['Low', 'Medium', 'High'],
+                    'Probability': [result['probabilities']['Low'], 
+                                  result['probabilities']['Medium'], 
+                                  result['probabilities']['High']]
+                })
+                
+                fig = px.bar(
+                    prob_df, x='Risk Level', y='Probability',
+                    color='Risk Level',
+                    color_discrete_map={'Low': '#28a745', 'Medium': '#ffc107', 'High': '#dc3545'},
+                    title="Prediction Probabilities"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.error(f"Error: {result.get('error', 'Unknown error')}")
 
 else:  # Batch Prediction
     st.markdown("---")
@@ -289,14 +284,11 @@ else:  # Batch Prediction
                     record['model_type'] = model_type
                 
                 try:
-                    response = requests.post(
-                        f"{API_URL}/predict/batch",
-                        json={'records': records},
-                        timeout=REQUEST_TIMEOUT
-                    )
-                    results = response.json()
-                    
+                    results, source = predict_batch_records(records)
                     if results['success']:
+                        if source == 'local':
+                            st.warning("Backend API unavailable; using local batch model inference.")
+
                         # Add predictions to dataframe
                         batch_df['Predicted_Risk'] = [p['risk_level'] for p in results['predictions']]
                         batch_df['Confidence'] = [p['confidence'] for p in results['predictions']]
@@ -328,6 +320,6 @@ else:  # Batch Prediction
                         st.dataframe(batch_df)
                     else:
                         st.error(f"Error: {results.get('error', 'Unknown error')}")
-                
+
                 except Exception as e:
-                    st.error(f"Failed to connect to API: {str(e)}")
+                    st.error(f"Failed to compute batch predictions: {str(e)}")
