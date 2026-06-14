@@ -48,11 +48,12 @@ def predict_record(features):
         response = requests.post(f"{API_URL}/predict", json=features, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json(), "api"
-    except requests.exceptions.RequestException:
+    except Exception as e:
         predictor = get_local_predictor()
         result = predictor(features)
         return {
             'success': True,
+            'error': f'API unavailable: {str(e)}',
             **result,
             'prediction_id': None
         }, "local"
@@ -68,7 +69,7 @@ def predict_batch_records(records):
         )
         response.raise_for_status()
         return response.json(), "api"
-    except requests.exceptions.RequestException:
+    except Exception as e:
         predictor = get_local_predictor()
         predictions = []
         for record in records:
@@ -78,6 +79,7 @@ def predict_batch_records(records):
             })
         return {
             'success': True,
+            'error': f'API unavailable: {str(e)}',
             'count': len(predictions),
             'predictions': predictions
         }, "local"
@@ -204,7 +206,7 @@ if mode == "Single Prediction":
             result, source = predict_record(features)
             if result.get('success'):
                 if source == 'local':
-                        st.warning("Backend API unavailable; using local saved ML/DL model inference.")
+                    st.warning(f"Backend API unavailable; using local saved ML/DL model inference. Reason: {result.get('error')}")
                 col1, col2, col3 = st.columns(3)
                 
                 risk_color = {
@@ -284,7 +286,7 @@ else:  # Batch Prediction
                     results, source = predict_batch_records(records)
                     if results['success']:
                         if source == 'local':
-                            st.warning("Backend API unavailable; using local batch model inference.")
+                            st.warning(f"Backend API unavailable; using local batch model inference. Reason: {results.get('error')}")
 
                         # Add predictions to dataframe
                         batch_df['Predicted_Risk'] = [p['risk_level'] for p in results['predictions']]
