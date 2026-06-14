@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import requests
 import json
+import plotly.express as px
 import sys
 from pathlib import Path
 
@@ -64,19 +65,22 @@ if mode == "Single Prediction":
         routine_task = st.slider(
             "Routine Task Percentage",
             min_value=0.0, max_value=100.0,
-            value=float(feature_ranges['Routine_Task_Percentage']['mean'])
+            value=round(float(feature_ranges['Routine_Task_Percentage']['mean']), 1),
+            step=0.1
         )
         
         creativity = st.slider(
             "Creativity Requirement",
             min_value=0.0, max_value=100.0,
-            value=float(feature_ranges['Creativity_Requirement']['mean'])
+            value=round(float(feature_ranges['Creativity_Requirement']['mean']), 1),
+            step=0.1
         )
         
         human_interaction = st.slider(
             "Human Interaction Level",
             min_value=0.0, max_value=100.0,
-            value=float(feature_ranges['Human_Interaction_Level']['mean'])
+            value=round(float(feature_ranges['Human_Interaction_Level']['mean']), 1),
+            step=0.1
         )
         
         ai_adoption = st.selectbox("AI Adoption Level", cat_options['AI_Adoption'])
@@ -90,19 +94,22 @@ if mode == "Single Prediction":
         ai_usage_hours = st.slider(
             "AI Usage Hours Per Week",
             min_value=0.0, max_value=30.0,
-            value=float(feature_ranges['AI_Usage_Hours_Per_Week']['mean'])
+            value=round(float(feature_ranges['AI_Usage_Hours_Per_Week']['mean']), 1),
+            step=0.1
         )
         
         tasks_automated = st.slider(
             "Tasks Automated Percentage",
             min_value=0.0, max_value=100.0,
-            value=float(feature_ranges['Tasks_Automated_Percentage']['mean'])
+            value=round(float(feature_ranges['Tasks_Automated_Percentage']['mean']), 1),
+            step=0.1
         )
         
         ai_training = st.slider(
             "AI Training Hours",
             min_value=0.0, max_value=80.0,
-            value=float(feature_ranges['AI_Training_Hours']['mean'])
+            value=round(float(feature_ranges['AI_Training_Hours']['mean']), 1),
+            step=0.1
         )
     
     # Prepare features for API
