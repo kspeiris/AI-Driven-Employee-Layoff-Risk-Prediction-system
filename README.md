@@ -20,6 +20,7 @@ The project is designed to help analyze how role characteristics, automation exp
 - [Screenshots](#-screenshots)
 - [Setup Instructions](#-setup-instructions)
 - [Run The Application](#-run-the-application)
+- [Dependencies and Runtime](#dependencies-and-runtime)
 - [API Examples](#-api-examples)
 - [Troubleshooting](#-troubleshooting)
 - [Future Improvements](#-future-improvements)
@@ -391,6 +392,8 @@ If the API runs on a different URL:
 $env:API_URL="http://127.0.0.1:5000"
 streamlit run dashboard/Home.py
 ```
+
+> For Streamlit Cloud, the app entrypoint is `dashboard/Home.py`, and the repository root must include `requirements.txt` and `runtime.txt`.
 
 ---
 
