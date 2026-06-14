@@ -6,14 +6,12 @@ import pandas as pd
 from flask import Blueprint, request, jsonify
 import joblib
 
-from config import FEATURE_COLUMNS, SCALER_PATH
+from config import FEATURE_COLUMNS
 from explainability import explainer
 from database import log_query
+from routes.predict import build_feature_vector
 
 explain_bp = Blueprint('explain', __name__)
-
-# Load scaler
-scaler = joblib.load(SCALER_PATH)
 
 
 @explain_bp.route('/explain/shap', methods=['POST'])
@@ -23,10 +21,9 @@ def get_shap_explanation():
     
     try:
         data = request.json
-        features = [data.get(col, 0) for col in FEATURE_COLUMNS]
-        features_scaled = scaler.transform([features])
+        features = build_feature_vector(data)
         
-        shap_values = explainer.get_shap_values(features_scaled)
+        shap_values = explainer.get_shap_values(features)
         
         # Get top contributing features
         shap_df = pd.DataFrame({
@@ -58,7 +55,7 @@ def get_lime_explanation():
     
     try:
         data = request.json
-        features = [data.get(col, 0) for col in FEATURE_COLUMNS]
+        features = build_feature_vector(data)
         
         lime_explanation = explainer.get_lime_explanation(features)
         

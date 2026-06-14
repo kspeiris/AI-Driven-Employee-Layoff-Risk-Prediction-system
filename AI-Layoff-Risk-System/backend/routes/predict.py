@@ -7,27 +7,58 @@ from flask import Blueprint, request, jsonify
 import joblib
 
 from config import (
-    CATBOOST_MODEL_PATH, SCALER_PATH, FEATURE_COLUMNS, RISK_MAPPING,
+    ML_MODEL_PATH, LEGACY_ML_MODEL_PATH, ANN_MODEL_PATH, DNN_MODEL_PATH,
+    SCALER_PATH, FEATURE_COLUMNS, RISK_MAPPING,
     INDUSTRY_LIST, JOB_ROLE_LIST, COMPANY_SIZE_LIST, JOB_LEVEL_LIST, AI_ADOPTION_LIST
 )
 from database import save_prediction, log_query
 
 predict_bp = Blueprint('predict', __name__)
 
-# Load models
+# Load saved model artifacts. There is no rule-based fallback: if an artifact is
+# unavailable, that model option is reported as unavailable.
 try:
-    model = joblib.load(CATBOOST_MODEL_PATH)
+    model_path = ML_MODEL_PATH if ML_MODEL_PATH.exists() else LEGACY_ML_MODEL_PATH
+    ml_model = joblib.load(model_path)
+    if hasattr(ml_model, "n_jobs"):
+        ml_model.n_jobs = 1
     scaler = joblib.load(SCALER_PATH)
-    model_loaded = True
 except FileNotFoundError:
-    model_loaded = False
-    model = None
+    ml_model = None
     scaler = None
+
+try:
+    from tensorflow.keras.models import load_model
+except Exception:
+    load_model = None
+
+ann_model = load_model(ANN_MODEL_PATH) if load_model and ANN_MODEL_PATH.exists() else None
+dnn_model = load_model(DNN_MODEL_PATH) if load_model and DNN_MODEL_PATH.exists() else None
+model_loaded = ml_model is not None and scaler is not None
+
+
+def _selected_model(model_type):
+    """Return the requested saved model artifact."""
+    normalized = (model_type or "ml").lower()
+    if normalized == "ann":
+        return ann_model, "ANN"
+    if normalized == "dnn":
+        return dnn_model, "DNN"
+    return ml_model, "Random Forest"
+
+
+def _encoded_value(data, column, raw_value=None, prefix=None):
+    """Read one-hot values from direct columns or raw categorical fields."""
+    if column in data:
+        return int(bool(data.get(column)))
+    if raw_value is None or prefix is None:
+        return 0
+    return int(column == f"{prefix}_{raw_value}")
 
 
 def build_feature_vector(data):
     """Build complete feature vector from input data."""
-    features = []
+    feature_values = {}
     
     # Numeric features
     numeric_features = [
@@ -38,40 +69,94 @@ def build_feature_vector(data):
     ]
     
     for col in numeric_features:
-        features.append(float(data.get(col, 0)))
+        feature_values[col] = float(data.get(col, 0))
     
-    # Education (default to Bachelor's)
+    # Education (Bachelor's is the dropped baseline from training)
     edu_level = data.get('Education_Level', "Bachelor's")
-    features.append(1 if edu_level == 'High School' else 0)
-    features.append(1 if edu_level == "Master's" else 0)
-    features.append(1 if edu_level == 'PhD' else 0)
+    feature_values['Education_Level_High School'] = _encoded_value(
+        data, 'Education_Level_High School', edu_level, 'Education_Level'
+    )
+    feature_values["Education_Level_Master's"] = _encoded_value(
+        data, "Education_Level_Master's", edu_level, 'Education_Level'
+    )
+    feature_values['Education_Level_PhD'] = _encoded_value(
+        data, 'Education_Level_PhD', edu_level, 'Education_Level'
+    )
     
     # Industry
     industry = data.get('Industry', '')
     for ind in INDUSTRY_LIST:
-        features.append(1 if industry == ind else 0)
+        col = f'Industry_{ind}'
+        feature_values[col] = _encoded_value(data, col, industry, 'Industry')
     
     # Job Role
     job_role = data.get('Job_Role', '')
     for job in JOB_ROLE_LIST:
-        features.append(1 if job_role == job else 0)
+        col = f'Job_Role_{job}'
+        feature_values[col] = _encoded_value(data, col, job_role, 'Job_Role')
     
     # Company Size
     company_size = data.get('Company_Size', 'Medium')
-    features.append(1 if company_size == 'Medium' else 0)
-    features.append(1 if company_size == 'Small' else 0)
+    feature_values['Company_Size_Medium'] = _encoded_value(
+        data, 'Company_Size_Medium', company_size, 'Company_Size'
+    )
+    feature_values['Company_Size_Small'] = _encoded_value(
+        data, 'Company_Size_Small', company_size, 'Company_Size'
+    )
     
     # Job Level
     job_level = data.get('Job_Level', 'Entry')
-    features.append(1 if job_level == 'Mid' else 0)
-    features.append(1 if job_level == 'Senior' else 0)
+    feature_values['Job_Level_Mid'] = _encoded_value(data, 'Job_Level_Mid', job_level, 'Job_Level')
+    feature_values['Job_Level_Senior'] = _encoded_value(data, 'Job_Level_Senior', job_level, 'Job_Level')
     
     # AI Adoption Level
     ai_adoption = data.get('AI_Adoption', 'Low')
-    features.append(1 if ai_adoption == 'Low' else 0)
-    features.append(1 if ai_adoption == 'Medium' else 0)
+    feature_values['AI_Adoption_Level_Low'] = _encoded_value(
+        data, 'AI_Adoption_Level_Low', ai_adoption, 'AI_Adoption_Level'
+    )
+    feature_values['AI_Adoption_Level_Medium'] = _encoded_value(
+        data, 'AI_Adoption_Level_Medium', ai_adoption, 'AI_Adoption_Level'
+    )
     
-    return features
+    return [feature_values.get(col, 0) for col in FEATURE_COLUMNS]
+
+
+def run_model_prediction(data):
+    """Run the selected saved ML/DL model and return prediction details."""
+    if scaler is None:
+        raise RuntimeError('Scaler not loaded')
+
+    model_type = data.get('model_type', 'ml')
+    selected_model, model_name = _selected_model(model_type)
+    if selected_model is None:
+        raise RuntimeError(f'{model_name} model is not loaded')
+
+    features = build_feature_vector(data)
+    feature_frame = pd.DataFrame([features], columns=FEATURE_COLUMNS)
+
+    if model_name in {'ANN', 'DNN'}:
+        features_scaled = scaler.transform(feature_frame)
+        probabilities = selected_model.predict(features_scaled, verbose=0)[0]
+        prediction = int(np.argmax(probabilities))
+    else:
+        prediction = int(selected_model.predict(feature_frame)[0])
+        probabilities = selected_model.predict_proba(feature_frame)[0]
+
+    confidence = float(np.max(probabilities))
+    risk_level = RISK_MAPPING[prediction]
+
+    return {
+        'prediction': prediction,
+        'risk_level': risk_level,
+        'confidence': confidence,
+        'probabilities': {
+            'Low': float(probabilities[0]),
+            'Medium': float(probabilities[1]),
+            'High': float(probabilities[2])
+        },
+        'model_type': model_type,
+        'model_name': model_name
+    }
 
 
 @predict_bp.route('/predict', methods=['POST'])
@@ -84,35 +169,15 @@ def predict():
     
     try:
         data = request.json
-        
-        # Build feature vector
-        features = build_feature_vector(data)
-        
-        # Scale features
-        features_scaled = scaler.transform([features])
-        
-        # Make prediction
-        prediction = model.predict(features_scaled)[0]
-        probabilities = model.predict_proba(features_scaled)[0]
-        confidence = float(np.max(probabilities))
-        
-        # Get readable risk level
-        risk_level = RISK_MAPPING[prediction]
+        result = run_model_prediction(data)
         
         # Save to database
-        prediction_id = save_prediction(data, risk_level, confidence)
+        prediction_id = save_prediction(data, result['risk_level'], result['confidence'])
         
         # Prepare response
         response = {
             'success': True,
-            'prediction': int(prediction),
-            'risk_level': risk_level,
-            'confidence': confidence,
-            'probabilities': {
-                'Low': float(probabilities[0]),
-                'Medium': float(probabilities[1]),
-                'High': float(probabilities[2])
-            },
+            **result,
             'prediction_id': prediction_id
         }
         
@@ -126,10 +191,48 @@ def predict():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@predict_bp.route('/predict/batch', methods=['POST'])
+def predict_batch():
+    """Batch prediction endpoint using the selected saved ML/DL model."""
+    start_time = time.time()
+
+    if not model_loaded:
+        return jsonify({'success': False, 'error': 'Model not loaded'}), 503
+
+    try:
+        records = request.json.get('records', [])
+        predictions = []
+
+        for record in records:
+            result = run_model_prediction(record)
+            prediction_id = save_prediction(record, result['risk_level'], result['confidence'])
+            predictions.append({
+                **result,
+                'prediction_id': prediction_id
+            })
+
+        elapsed_ms = (time.time() - start_time) * 1000
+        log_query('/predict/batch', elapsed_ms)
+
+        return jsonify({
+            'success': True,
+            'count': len(predictions),
+            'predictions': predictions
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @predict_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint."""
     return jsonify({
         'status': 'healthy' if model_loaded else 'degraded',
-        'model_loaded': model_loaded
+        'model_loaded': model_loaded,
+        'models': {
+            'ml': ml_model is not None,
+            'ann': ann_model is not None,
+            'dnn': dnn_model is not None
+        }
     })
