@@ -283,51 +283,15 @@ dashboard/
 
 ## 🖼️ Screenshots
 
-Add screenshots in a folder such as:
+![image](images/e1.png)
+![image](images/e2.png)
+![image](images/e3.png)
+![image](images/e4.png)
+![image](images/e5.png)
+![image](images/e6.png)
+![image](images/e7.png)
+![image](images/e8.png)
 
-```text
-docs/screenshots/
-```
-
-Recommended screenshots:
-
-### 🏠 Home Dashboard
-
-```markdown
-![Home Dashboard](docs/screenshots/home-dashboard.png)
-```
-
-### 📊 Analytics Page
-
-```markdown
-![Analytics Page](docs/screenshots/analytics-page.png)
-```
-
-### 🎯 Prediction Page
-
-```markdown
-![Prediction Page](docs/screenshots/prediction-page.png)
-```
-
-### 🔍 Explainable AI Page
-
-```markdown
-![Explainable AI Page](docs/screenshots/explainable-ai-page.png)
-```
-
-### 🏭 Industry Intelligence Page
-
-```markdown
-![Industry Intelligence](docs/screenshots/industry-intelligence.png)
-```
-
-### 📈 Model Performance Page
-
-```markdown
-![Model Performance](docs/screenshots/model-performance.png)
-```
-
----
 
 ## ⚙️ Setup Instructions
 
