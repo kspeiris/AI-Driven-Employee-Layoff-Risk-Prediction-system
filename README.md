@@ -1,5 +1,7 @@
 # 🤖 AI-Driven Employee Layoff Risk Prediction
 
+![image](images/hero.png)
+
 An end-to-end workforce intelligence platform that predicts employee layoff risk using machine learning and deep learning models. The system combines a Flask prediction API, a Streamlit analytics dashboard, saved model artifacts, explainability tools, and a processed workforce dataset.
 
 The project is designed to help analyze how role characteristics, automation exposure, AI adoption, creativity requirements, and industry context relate to workforce displacement risk.
